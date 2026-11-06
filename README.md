@@ -1,6 +1,6 @@
 <div align="center">
 
-# disboard-bumper
+# SupremeBumper
 
 **Keep your server's Disboard bump on autopilot.**
 
@@ -8,20 +8,13 @@ A focused, single-file Python client that fires Disboard's `/bump` interaction t
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![aiohttp](https://img.shields.io/badge/aiohttp-3.9%2B-2C5BB4?style=for-the-badge&logo=python&logoColor=white)](https://docs.aiohttp.org/)
-[![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](https://github.com/your-user/disboard-bumper/blob/main/LICENSE)
-[![Stars](https://img.shields.io/github/stars/your-user/disboard-bumper?style=for-the-badge&color=f5a623)](https://github.com/your-user/disboard-bumper/stargazers)
-[![Forks](https://img.shields.io/github/forks/your-user/disboard-bumper?style=for-the-badge&color=8b5cf6)](https://github.com/your-user/disboard-bumper/network/members)
-[![Issues](https://img.shields.io/github/issues/your-user/disboard-bumper?style=for-the-badge&color=ef4444)](https://github.com/your-user/disboard-bumper/issues)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](https://github.com/your-user/disboard-bumper/pulls)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/)
+[![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)](https://github.com/iamslop/SupremeBumper/blob/main/LICENSE)
+[![Stars](https://img.shields.io/github/stars/iamslop/SupremeBumper?style=for-the-badge&color=f5a623)](https://github.com/iamslop/SupremeBumper/stargazers)
+[![Forks](https://img.shields.io/github/forks/iamslop/SupremeBumper?style=for-the-badge&color=8b5cf6)](https://github.com/iamslop/SupremeBumper/network/members)
+[![Issues](https://img.shields.io/github/issues/iamslop/SupremeBumper?style=for-the-badge&color=ef4444)](https://github.com/iamslop/SupremeBumper/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](https://github.com/iamslop/SupremeBumper/pulls)
 
-[Features](#features) •
-[Quick Start](#quick-start) •
-[How It Works](#how-it-works) •
-[Configuration](#configuration) •
-[FAQ](#faq) •
-[Roadmap](#roadmap) •
-[Contributing](#contributing)
+[Features](#features) • [Quick Start](#quick-start) • [How It Works](#how-it-works) • [Configuration](#configuration) • [FAQ](#faq) • [Roadmap](#roadmap) • [Contributing](#contributing)
 
 </div>
 
@@ -37,15 +30,8 @@ A focused, single-file Python client that fires Disboard's `/bump` interaction t
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Quick Start](#quick-start)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Running](#running)
 - [How It Works](#how-it-works)
-  - [Architecture](#architecture)
-  - [Cooldown Detection](#cooldown-detection)
 - [Configuration](#configuration)
-  - [Getting IDs and Token](#getting-ids-and-token)
-  - [Tunable Constants](#tunable-constants)
 - [Logging](#logging)
 - [Folder Layout](#folder-layout)
 - [Project Structure](#project-structure)
@@ -63,9 +49,9 @@ A focused, single-file Python client that fires Disboard's `/bump` interaction t
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### Core
+**Core**
 
 - **Auto-Bump** — fires `/bump` the instant the cooldown clears
 - **Real Interaction API** — sends `APPLICATION_COMMAND` payloads, not plain messages
@@ -74,9 +60,9 @@ A focused, single-file Python client that fires Disboard's `/bump` interaction t
 - **Gateway Reconnect** — WebSocket drops caught and retried automatically
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### Reliability
+**Reliability**
 
 - **Rate-Limit Aware** — HTTP `429` responses back off using `retry_after`
 - **Command Resolution** — pulls `/bump`'s `id` and `version` from the guild command index
@@ -124,8 +110,8 @@ Channel ID	—	Channel where /bump is permitted
 Installation
 
 # 1. Clone
-git clone https://github.com/your-user/disboard-bumper.git
-cd disboard-bumper
+git clone https://github.com/iamslop/SupremeBumper.git
+cd SupremeBumper
 
 # 2. Install the single dependency
 pip install aiohttp
@@ -133,18 +119,14 @@ pip install aiohttp
 # 3. Open bump.py and fill in the three constants at the top
 #    TOKEN, GUILD_ID, CHANNEL_ID
 
-Running
+Running 
 
 python bump.py
 
 That's it. Leave it running in a terminal, tmux, screen, or a service manager. Press Ctrl+C to stop cleanly — the script logs an EXIT line and releases the gateway session.
 
 How It Works
-
-disboard-bumper is a single asyncio process that runs three coroutines side by side:
-
-
-disboard-bumper is a single asyncio process that runs three coroutines side by side:
+SupremeBumper is a single asyncio process that runs three coroutines side by side:
 
 flowchart LR
     A[main] --> B[Validate token]
@@ -159,7 +141,7 @@ flowchart LR
     I -->|204| J[Log BUMP]
     I -->|429| K[Back off]
 
-Architecture
+    Architecture
 Token validation — calls /users/@me; exits if rejected.
 
 History seed — pages up to 10×100 channel messages backwards, finds the latest Disboard message, sets cooldown_until = timestamp + 2h.
@@ -234,7 +216,7 @@ All logs are line-buffered and go to stdout so they appear immediately even when
 Folder Layout
 The script is self-contained — nothing is written to disk at runtime.
 
-disboard-bumper/
+SupremeBumper/
 ├── bump.py           # the whole tool
 ├── README.md         # this file
 ├── LICENSE           # MIT
@@ -387,7 +369,7 @@ Disboard — target bot and command surface (302050872383242240)
 
 Discord — Gateway and /interactions API
 
-Built and maintained by the disboard-bumper project
+Built and maintained by Velo
 
 <div align="center">
 If this project helped you, consider giving it a star — it really helps.
@@ -397,3 +379,4 @@ Made with care and a lot of asyncio
 Back to Top
 
 </div> ```
+
