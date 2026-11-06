@@ -95,20 +95,31 @@ A focused, single-file Python client that fires Disboard's `/bump` interaction t
 [COMMAND ] /bump resolved  |  id 987654321098765432
 [SESSION ] connected as YourName (123456789012345678)  |  id abc12345...
 [BUMP    ] sent 14:00:01  |  attempt #1
+```
 
 </div>
 
-Quick Start
-Prerequisites
-Requirement	Version	Purpose
-Python	3.10+	asyncio features used throughout
-aiohttp	3.9+	Async HTTP client + WebSocket
-Discord user token	—	Authentication (not a bot token)
-Guild ID	—	Server containing Disboard
-Channel ID	—	Channel where /bump is permitted
+---
 
-Installation
+## Quick Start
 
+### Prerequisites
+
+| Requirement | Version | Purpose |
+|-------------|---------|---------|
+| **Python** | `3.10+` | `asyncio` features used throughout |
+| **aiohttp** | `3.9+` | Async HTTP client + WebSocket |
+| **Discord user token** | — | Authentication (not a bot token) |
+| **Guild ID** | — | Server containing Disboard |
+| **Channel ID** | — | Channel where `/bump` is permitted |
+
+```bash
+pip install aiohttp
+```
+
+### Installation
+
+```bash
 # 1. Clone
 git clone https://github.com/iamslop/SupremeBumper.git
 cd SupremeBumper
@@ -118,16 +129,23 @@ pip install aiohttp
 
 # 3. Open bump.py and fill in the three constants at the top
 #    TOKEN, GUILD_ID, CHANNEL_ID
+```
 
-Running 
+### Running
 
+```bash
 python bump.py
+```
 
-That's it. Leave it running in a terminal, tmux, screen, or a service manager. Press Ctrl+C to stop cleanly — the script logs an EXIT line and releases the gateway session.
+That's it. Leave it running in a terminal, `tmux`, `screen`, or a service manager. Press `Ctrl+C` to stop cleanly — the script logs an `EXIT` line and releases the gateway session.
 
-How It Works
-SupremeBumper is a single asyncio process that runs three coroutines side by side:
+---
 
+## How It Works
+
+SupremeBumper is a single `asyncio` process that runs three coroutines side by side:
+
+```mermaid
 flowchart LR
     A[main] --> B[Validate token]
     B --> C[Seed history]
@@ -140,93 +158,110 @@ flowchart LR
     F -->|cooldown clear| I[/interactions POST/]
     I -->|204| J[Log BUMP]
     I -->|429| K[Back off]
+```
 
-    Architecture
-Token validation — calls /users/@me; exits if rejected.
+### Architecture
 
-History seed — pages up to 10×100 channel messages backwards, finds the latest Disboard message, sets cooldown_until = timestamp + 2h.
-
-Command resolution — fetches /guilds/{GUILD_ID}/application-command-index, pulls Disboard's /bump object (id + version required for the interaction payload).
-
-Gateway — maintains a WebSocket to wss://gateway.discord.gg/?v=10&encoding=json, sends identify with a patched desktop-client payload, heartbeats at the server-provided interval, reconnects on drop.
-
-Sender — loops forever; when time.time() >= cooldown_until, POSTs an interaction of type: 2 (APPLICATION_COMMAND) to /interactions using a fresh snowflake nonce and the current session_id.
-
-Status — prints last bump / next bump / attempts every second.
+1. **Token validation** — calls `/users/@me`; exits if rejected.
+2. **History seed** — pages up to 10×100 channel messages backwards, finds the latest Disboard message, sets `cooldown_until = timestamp + 2h`.
+3. **Command resolution** — fetches `/guilds/{GUILD_ID}/application-command-index`, pulls Disboard's `/bump` object (`id` + `version` required for the interaction payload).
+4. **Gateway** — maintains a WebSocket to `wss://gateway.discord.gg/?v=10&encoding=json`, sends `identify` with a patched desktop-client payload, heartbeats at the server-provided interval, reconnects on drop.
+5. **Sender** — loops forever; when `time.time() >= cooldown_until`, POSTs an interaction of `type: 2` (`APPLICATION_COMMAND`) to `/interactions` using a fresh snowflake nonce and the current `session_id`.
+6. **Status** — prints `last bump / next bump / attempts` every second.
 
 All work is client-side. The script talks to the same HTTP endpoints and Gateway the official Discord desktop client uses.
 
-Cooldown Detection
-Disboard replies with an ephemeral message (flag 64) in the same channel. Two reply shapes are parsed:
+### Cooldown Detection
 
-Reply	Regex
-"Wait another 127 minutes before bumping again"	another\s+(\d+)\s+minute
-"Please wait 30 seconds before retrying"	wait\s+(?:another\s+)?(\d+)\s+second
-Minute matches → cooldown_until = now + minutes*60, ready time logged.
+Disboard replies with an **ephemeral** message (flag `64`) in the same channel. Two reply shapes are parsed:
 
-Second matches → cooldown_until = now + seconds.
+| Reply | Regex |
+|-------|-------|
+| `"Wait another 127 minutes before bumping again"` | `another\s+(\d+)\s+minute` |
+| `"Please wait 30 seconds before retrying"` | `wait\s+(?:another\s+)?(\d+)\s+second` |
 
-Public confirmation → cooldown_until = message.timestamp + 2h.
+- **Minute matches** → `cooldown_until = now + minutes*60`, ready time logged.
+- **Second matches** → `cooldown_until = now + seconds`.
+- **Public confirmation** → `cooldown_until = message.timestamp + 2h`.
+- **Duplicates** → deduplicated against `state["last_ephemeral"]`.
 
-Duplicates → deduplicated against state["last_ephemeral"].
+If Disboard changes wording and detection fails, `RETRY_GUARD` (20 s) caps how often the sender retries — no runaway spam.
 
-If Disboard changes wording and detection fails, RETRY_GUARD (20 s) caps how often the sender retries — no runaway spam.
+---
 
-Configuration
-Open bump.py and set the three values at the top:
+## Configuration
 
+Open `bump.py` and set the three values at the top:
+
+```python
 TOKEN      = "USER_TOKEN"   # user token of the account that will bump
 GUILD_ID   = "SERVER_ID"    # server containing Disboard and the bump channel
 CHANNEL_ID = "CHANNEL_ID"   # channel where /bump is permitted
+```
 
-Getting IDs and Token
-In Discord, go to User Settings → Advanced → Developer Mode and enable it.
+### Getting IDs and Token
 
-Right-click your server → Copy Server ID → paste as GUILD_ID.
+1. In Discord, go to **User Settings → Advanced → Developer Mode** and enable it.
+2. Right-click your server → **Copy Server ID** → paste as `GUILD_ID`.
+3. Right-click the bump channel → **Copy Channel ID** → paste as `CHANNEL_ID`.
+4. Retrieve your account token from your own logged-in client (DevTools → Network → any request → `authorization` header). **Treat it exactly like a password.**
 
-Right-click the bump channel → Copy Channel ID → paste as CHANNEL_ID.
+> [!CAUTION]
+> Never commit `bump.py` to a public repo once real credentials are set. Add it to `.gitignore`, or move the three constants into a private `secrets.py` and import from it.
 
-Retrieve your account token from your own logged-in client (DevTools → Network → any request → authorization header). Treat it exactly like a password.
+### Tunable Constants
 
-[!CAUTION]
-Never commit bump.py to a public repo once real credentials are set. Add it to .gitignore, or move the three constants into a private secrets.py and import from it.
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `RETRY_GUARD` | `20.0` | Minimum seconds between attempts when no cooldown is known |
+| `STATUS_INTERVAL` | `1.0` | Seconds between status printouts |
+| `APP_ID` / `BOT_ID` | `302050872383242240` | Disboard IDs — leave unchanged |
+| `CMD_NAME` | `"bump"` | The command name to invoke |
 
-Tunable Constants
-Constant	Default	Description
-RETRY_GUARD	20.0	Minimum seconds between attempts when no cooldown is known
-STATUS_INTERVAL	1.0	Seconds between status printouts
-APP_ID / BOT_ID	302050872383242240	Disboard IDs — leave unchanged
-CMD_NAME	"bump"	The command name to invoke
-Logging
-Tag	Meaning
-ACCOUNT	Token validated; account name and ID
-DISBOARD	Last-known or newly-seen Disboard message
-COOLDOWN	Parsed ephemeral wait message
-STATUS	Periodic snapshot (last bump, next bump, attempts)
-COMMAND	/bump command object resolved with its ID
-SESSION	Gateway session established
-GATEWAY	Session resumed after a drop
-BUMP	Interaction accepted (HTTP 204)
-LIMIT	HTTP 429; backing off
-WARN	Non-fatal issue; will retry
-ERROR	Network, gateway, or API error with reconnect info
-EXIT	Clean shutdown via Ctrl+C
-All logs are line-buffered and go to stdout so they appear immediately even when piped.
+---
 
-Folder Layout
+## Logging
+
+| Tag | Meaning |
+|-----|---------|
+| `ACCOUNT` | Token validated; account name and ID |
+| `DISBOARD` | Last-known or newly-seen Disboard message |
+| `COOLDOWN` | Parsed ephemeral wait message |
+| `STATUS` | Periodic snapshot (last bump, next bump, attempts) |
+| `COMMAND` | `/bump` command object resolved with its ID |
+| `SESSION` | Gateway session established |
+| `GATEWAY` | Session resumed after a drop |
+| `BUMP` | Interaction accepted (HTTP 204) |
+| `LIMIT` | HTTP 429; backing off |
+| `WARN` | Non-fatal issue; will retry |
+| `ERROR` | Network, gateway, or API error with reconnect info |
+| `EXIT` | Clean shutdown via `Ctrl+C` |
+
+All logs are line-buffered and go to `stdout` so they appear immediately even when piped.
+
+---
+
+## Folder Layout
+
 The script is self-contained — nothing is written to disk at runtime.
 
+```text
 SupremeBumper/
 ├── bump.py           # the whole tool
 ├── README.md         # this file
 ├── LICENSE           # MIT
 └── .gitignore        # recommended: exclude secrets.py
+```
 
 No config files, no cache directories, no downloaded assets.
 
-Project Structure
+---
+
+## Project Structure
+
 The file is a flat script organized into logical sections:
 
+```text
 Configuration
 ├── TOKEN, GUILD_ID, CHANNEL_ID
 ├── APP_ID, BOT_ID, CMD_NAME
@@ -261,66 +296,103 @@ Loops
 
 Entry
 └── main() + __main__ guard
+```
 
-FAQ
-<details> <summary><b>Is this a bot account?</b></summary>
-No. It uses your user token, not a bot token. That's why it can invoke slash commands the way a real client does — and why it violates Discord's ToS.
+---
 
-</details><details> <summary><b>Why not just send the text <code>/bump</code>?</b></summary>
-Sending the literal text /bump does not invoke a slash command — Discord only treats it as a command when it arrives through the Interaction API. This script builds the interaction payload by hand using the resolved command object, which is exactly what the Discord client does under the hood.
+## FAQ
 
-</details><details> <summary><b>What happens if Disboard changes its reply wording?</b></summary>
-Cooldown parsing is text-based and may miss. The RETRY_GUARD (20 s) caps how often the sender retries, so worst case is a slower bump schedule, not spam.
+<details>
+<summary><b>Is this a bot account?</b></summary>
 
-</details><details> <summary><b>Can I run multiple instances?</b></summary>
-One process per account. Running two processes on the same token will fight over the gateway and trigger invalid session (opcode 9). For multiple servers, run one instance per account or use one server per instance.
+No. It uses your **user token**, not a bot token. That's why it can invoke slash commands the way a real client does — and why it violates Discord's ToS.
 
-</details><details> <summary><b>Will I get banned?</b></summary>
+</details>
+
+<details>
+<summary><b>Why not just send the text <code>/bump</code>?</b></summary>
+
+Sending the literal text `/bump` does **not** invoke a slash command — Discord only treats it as a command when it arrives through the Interaction API. This script builds the interaction payload by hand using the resolved command object, which is exactly what the Discord client does under the hood.
+
+</details>
+
+<details>
+<summary><b>What happens if Disboard changes its reply wording?</b></summary>
+
+Cooldown parsing is text-based and may miss. The `RETRY_GUARD` (20 s) caps how often the sender retries, so worst case is a slower bump schedule, not spam.
+
+</details>
+
+<details>
+<summary><b>Can I run multiple instances?</b></summary>
+
+One process per account. Running two processes on the same token will fight over the gateway and trigger `invalid session` (opcode 9). For multiple servers, run one instance per account or use one server per instance.
+
+</details>
+
+<details>
+<summary><b>Will I get banned?</b></summary>
+
 Potentially, yes. Self-bots are explicitly disallowed by Discord's Terms of Service. This project exists for educational and research purposes only.
 
-</details><details> <summary><b>How do I keep the token out of Git?</b></summary>
-Move the three constants into a private secrets.py:
+</details>
 
+<details>
+<summary><b>How do I keep the token out of Git?</b></summary>
+
+Move the three constants into a private `secrets.py`:
+
+```python
 # secrets.py
 TOKEN      = "..."
 GUILD_ID   = "..."
 CHANNEL_ID = "..."
+```
 
-Then in bump.py:
+Then in `bump.py`:
 
+```python
 from secrets import TOKEN, GUILD_ID, CHANNEL_ID
+```
 
-And add secrets.py to .gitignore.
+And add `secrets.py` to `.gitignore`.
 
 </details>
-Roadmap
-☑ Single-file, dependency-light implementation
-☑ Gateway reconnect handling
-☑ Ephemeral cooldown parsing
-☑ History seed for last bump
-☑ Live status line
-□ --config flag to accept a JSON path instead of editing constants
-□ Graceful shutdown via signal handler on Windows
-□ Docker image and docker-compose.yml example
-□ Systemd unit file example
-□ Optional webhook notification on successful bump
-□ Metrics exporter (Prometheus-friendly)
-Known Limitations
-Client fingerprint drift: identify_payload() and UA mirror the desktop client (Windows, Chrome 120, build 240000). If Discord rejects identify with opcode 9, update these to match the current stable client.
 
-Cooldown parsing is text-based: two regexes match Disboard's current wording. If the wording changes, detection silently falls back to RETRY_GUARD.
+---
 
-Single channel: the script only watches and sends in CHANNEL_ID. Running it in a channel where Disboard isn't active in that guild just no-ops.
+## Roadmap
 
-Session required: interaction payloads include session_id, so the gateway must be connected before a bump can fire.
+- [x] Single-file, dependency-light implementation
+- [x] Gateway reconnect handling
+- [x] Ephemeral cooldown parsing
+- [x] History seed for last bump
+- [x] Live status line
+- [ ] `--config` flag to accept a JSON path instead of editing constants
+- [ ] Graceful shutdown via signal handler on Windows
+- [ ] Docker image and `docker-compose.yml` example
+- [ ] Systemd unit file example
+- [ ] Optional webhook notification on successful bump
+- [ ] Metrics exporter (Prometheus-friendly)
 
-Token safety: the token is stored in plaintext. Never commit, never share, rotate if leaked.
+---
 
-Account risk: Discord's ToS prohibits self-bots. Bannable offense; run only on an account you're prepared to lose.
+## Known Limitations
 
-Contributing
+- **Client fingerprint drift:** `identify_payload()` and `UA` mirror the desktop client (Windows, Chrome `120`, build `240000`). If Discord rejects `identify` with opcode `9`, update these to match the current stable client.
+- **Cooldown parsing is text-based:** two regexes match Disboard's current wording. If the wording changes, detection silently falls back to `RETRY_GUARD`.
+- **Single channel:** the script only watches and sends in `CHANNEL_ID`. Running it in a channel where Disboard isn't active in that guild just no-ops.
+- **Session required:** interaction payloads include `session_id`, so the gateway must be connected before a bump can fire.
+- **Token safety:** the token is stored in plaintext. Never commit, never share, rotate if leaked.
+- **Account risk:** Discord's ToS prohibits self-bots. Bannable offense; run only on an account you're prepared to lose.
+
+---
+
+## Contributing
+
 Contributions are welcome! Please open an issue first to discuss significant changes.
 
+```bash
 # 1. Fork and clone
 git clone https://github.com/iamslop/SupremeBumper.git
 
@@ -338,45 +410,75 @@ git commit -m "feat: my change"
 git push origin feature/my-change
 
 # 6. Open a Pull Request
+```
 
-Guidelines:
+**Guidelines:**
 
-Keep the script single-file unless there's a strong reason not to.
+- Keep the script single-file unless there's a strong reason not to.
+- No new dependencies without discussion.
+- No credentials, tokens, or personal data in commits.
+- Follow the existing code style (PEP 8, `log()` for output).
 
-No new dependencies without discussion.
+---
 
-No credentials, tokens, or personal data in commits.
+## Security
 
-Follow the existing code style (PEP 8, log() for output).
+Found a security issue? **Do not open a public issue.** Email the maintainers directly (see the repo's `SECURITY.md` once created). Please include:
 
-Security
-Found a security issue? Do not open a public issue. Email the maintainers directly (see the repo's SECURITY.md once created). Please include:
-
-A description of the issue
-
-Steps to reproduce
-
-Potential impact
-
-Any suggested fix
+- A description of the issue
+- Steps to reproduce
+- Potential impact
+- Any suggested fix
 
 Responsible disclosure is appreciated.
 
-Credits
-aiohttp — asynchronous HTTP client and WebSocket library
+---
 
-Disboard — target bot and command surface (302050872383242240)
+## Credits
 
-Discord — Gateway and /interactions API
+- **[aiohttp](https://github.com/aio-libs/aiohttp)** — asynchronous HTTP client and WebSocket library
+- **[Disboard](https://disboard.org/)** — target bot and command surface (`302050872383242240`)
+- **[Discord](https://discord.com/developers/docs/)** — Gateway and `/interactions` API
+- Built and maintained by [iamslop](https://github.com/iamslop)
 
-Built and maintained by Velo
+---
+
+## License
+
+Released under the [MIT License](https://github.com/iamslop/SupremeBumper/blob/main/LICENSE).
+
+```text
+MIT License
+
+Copyright (c) 2024 iamslop
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
 
 <div align="center">
-If this project helped you, consider giving it a star — it really helps.
 
-Made with care and a lot of asyncio
+**If this project helped you, consider giving it a star — it really helps.**
 
-Back to Top
+Made with care and a lot of `asyncio`
 
-</div> ```
+[Back to Top](#supremebumper)
 
+</div>
