@@ -113,9 +113,6 @@ A focused, single-file Python client that fires Disboard's `/bump` interaction t
 | **Guild ID** | — | Server containing Disboard |
 | **Channel ID** | — | Channel where `/bump` is permitted |
 
-```bash
-pip install aiohttp
-```
 
 ### Installation
 
